@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Purple AI"
+description = "A secure, responsive AI chat web app with user accounts, private conversation history, account settings, and streamed replies from NVIDIA Nemotron through OpenRouter."
+version = "1.0.0"
+id = "artifacts/purple-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25141
+
+[services.development]
+run = "pnpm --filter @workspace/purple-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/purple-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/purple-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25141"
+BASE_PATH = "/"
