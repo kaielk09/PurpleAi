@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel, Field
 from huggingface_hub import hf_hub_download
 
@@ -118,12 +118,21 @@ class ChatRequest(BaseModel):
 def health():
     return {"status": "ok", "model": MODEL_ID, "loaded": model is not None, "device": DEVICE}
 
+def require_api_key(authorization: str | None):
+    expected = os.getenv("PURPLEAI_API_KEY")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Set PURPLEAI_API_KEY before exposing this API publicly")
+    if authorization != f"Bearer {expected}":
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
 @app.get("/v1/models")
-def models():
+def models(authorization: str | None = Header(default=None)):
+    require_api_key(authorization)
     return {"object": "list", "data": [{"id": MODEL_ID, "object": "model", "owned_by": "Kamiljdds"}]}
 
 @app.post("/v1/chat/completions")
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
+    require_api_key(authorization)
     if model is None or vocab is None:
         raise HTTPException(status_code=503, detail="PurpleAI model is not loaded")
     # This is character-level continuation; it is not instruction-tuned ChatGPT behavior.
